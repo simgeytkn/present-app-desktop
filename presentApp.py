@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-
-from PyQt5.QtWidgets import (QFileDialog, QMessageBox)
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import (QFileDialog, QWidget, QMessageBox,QProgressBar)
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file,client,tools
@@ -26,6 +26,8 @@ import threading
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 recordFlag = True
+
+
 
 def int_or_str(text):
         """Helper function for argument parsing."""
@@ -64,7 +66,7 @@ args = parser.parse_args(remaining)
 work_directory_path = os.getcwd()
 print("PATH: "+work_directory_path)
 
-class Ui_Frame(object):
+class Ui_Frame(QWidget):
     def setupUi(self, Frame):
         Frame.setObjectName("Frame")
         Frame.resize(872, 792)
@@ -72,6 +74,12 @@ class Ui_Frame(object):
 "background-color: rgb(0, 0, 0);")
         Frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
         Frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.progressBar = QtWidgets.QProgressBar(Frame)
+        self.progressBar.setGeometry(QtCore.QRect(490, 460, 310, 61))
+        self.timer = QTimer()
+        self.step = 0
+
+
         self.label = QtWidgets.QLabel(Frame)
         self.label.setGeometry(QtCore.QRect(170, 140, 61, 61))
         self.label.setText("")
@@ -118,14 +126,11 @@ class Ui_Frame(object):
 "font: 81 26pt \"Open Sans\";")
         self.pushButton.setObjectName("pushButton")
         self.will_share_file = QtWidgets.QTextBrowser(Frame)
-        self.will_share_file.setGeometry(QtCore.QRect(350, 40, 441, 61))
-        self.will_share_file.setStyleSheet("color: rgb(8, 99, 17);\n"
-"background-color: rgb(138, 226, 52);\n"
-"font: 16pt \"Open Sans\";\n"
-"background-color: rgb(187, 248, 123);")
+        self.will_share_file.setGeometry(QtCore.QRect(400, 40, 441, 61))
         self.will_share_file.setText("")
         self.will_share_file.setObjectName("will_share_file")
-
+        self.will_share_file.setStyleSheet("color: rgb(255, 255, 255);\n"
+        "font: 18pt \"Open Sans\";")
         self.pause_and_share = QtWidgets.QPushButton(Frame)
         self.pause_and_share.setEnabled(False)
         self.pause_and_share.setGeometry(QtCore.QRect(490, 650, 311, 61))
@@ -140,7 +145,7 @@ class Ui_Frame(object):
         self.label_4.setText("")
         self.label_4.setPixmap(QtGui.QPixmap("arrow.png"))
         self.label_4.setObjectName("label_4")
-
+    
         self.retranslateUi(Frame)
         QtCore.QMetaObject.connectSlotsByName(Frame)
 
@@ -164,12 +169,12 @@ class Ui_Frame(object):
         _translate = QtCore.QCoreApplication.translate
         global path
         path = QFileDialog.getOpenFileName()
-        filename = '<span style=\" color: #000;\">''</span>'
+        filename = '<span style=\" color: #3399FF;\">''</span>'
         print("path: ", path[0])
         filename = path[0].split('/')
         print("File name: ",filename[-1])
-        filename = '<span style=\" color: #000;\">%s</span>'%filename[-1]
-        self.will_share_file.append("        "+filename)
+        filename = '<span style=\" color: #3399FF;\">%s</span>'%filename[-1]
+        self.will_share_file.append(filename)
         self.share_button.setEnabled(True)
         global ID
         letters = string.ascii_lowercase
@@ -177,11 +182,17 @@ class Ui_Frame(object):
         word = '<html><head/><body><p align=\"center\">%s</p></body></html>'%ID
         self.id_number_label.append(word)
 
+
     def share(self):
         print("share button", path)
+        self.timer.start(100)
+        self.step += 25
+        self.progressBar.setValue(self.step)
         try:
             import argparse
             flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+            self.step += 25
+            self.progressBar.setValue(self.step)
 
         except ImportError:
             flags = None
@@ -197,6 +208,8 @@ class Ui_Frame(object):
                     if flags else tools.run(flow,store)
 
         DRIVE = build('drive','v3', http=creds.authorize(Http()))
+        self.step += 25
+        self.progressBar.setValue(self.step)
 
         send_file = "'" + path[0] + "'"
         print("SEND FILE", send_file)   #bunun yerine ID ile gönderecek
@@ -215,6 +228,9 @@ class Ui_Frame(object):
         print("Metadata: ",metadata)
         res = DRIVE.files().create(body=metadata,media_body=path[0]).execute()
         
+        self.step += 25
+        self.progressBar.setValue(self.step)
+
         print("Bitti")
         self.pushButton.setEnabled(True)
         
@@ -223,34 +239,12 @@ class Ui_Frame(object):
             global y
             global recordFlag
             recordFlag = False
-            """print('\nRecording finished: ' + repr(args.filename))
-            print("pause_and_share")
-            global path
-            path = QFileDialog.getOpenFileName()
-            filename = '<span style=\" color: #000;\">''</span>'
-            print("path: ", path[0])
-            filename = path[0].split('/')
-            print("File name: ",filename[-1])
-            filename = '<span style=\" color: #000;\">%s</span>'%filename[-1]
-            self.will_share_file.append(filename)
-            self.share_button.setEnabled(True)
-            letters = string.ascii_lowercase
-            ID = ''.join(random.choice(letters) for i in range(8))
-
-            word = '<span style=\" font: 81 31pt \"Open Sans\" color: #b90505;\">%s</span>' % ID
-            self.id_number_label.append(word)"""
-
+            self.pushButton.setText("Recording stoped")
+            self.step += 25
+            self.progressBar.setValue(self.step)
             
             self.id_number_label.clear()
             self.will_share_file.clear()
-
-            letters = string.ascii_lowercase
-            ID = ''.join(random.choice(letters) for i in range(8))
-
-            word = '<span style=\" font: 81 31pt \"Open Sans\" color: #b90505;\">%s</span>' % ID
-            self.id_number_label.append(word)
-            self.will_share_file.append("        "+args.filename)
-            #print("Filename: "+args.filename)
 
             #Share kısmı. Fonksiyon çağırırken değişkenler lazım olacaktı
             #diye fonksiyonu çağırmadım. Fonksiyonu tekrar yazdım.
@@ -258,6 +252,8 @@ class Ui_Frame(object):
             path = work_directory_path + "/" + args.filename
             print("share button", path)
             try:
+                self.step += 25
+                self.progressBar.setValue(self.step)
                 import argparse
                 flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 
@@ -275,9 +271,16 @@ class Ui_Frame(object):
                         if flags else tools.run(flow,store)
 
             DRIVE = build('drive','v3', http=creds.authorize(Http()))
+            self.step += 25
+            self.progressBar.setValue(self.step)
+
+            
 
             send_file = "'" + path + "'"
             print("SEND FILE", send_file)   #bunun yerine ID ile gönderecek
+
+            letters = string.ascii_lowercase
+            ID = ''.join(random.choice(letters) for i in range(8))
 
             FILES = (
                 send_file
@@ -292,10 +295,21 @@ class Ui_Frame(object):
 
             print("Metadata: ",metadata)
             res = DRIVE.files().create(body=metadata,media_body=path).execute()
-            
+
+            self.step += 25
+            self.progressBar.setValue(self.step)
+
+
+            word = '<span style=\" font: 81 31pt \"Open Sans\" color: #b90505;\">%s</span>' % ID
+            self.id_number_label.append(word)
+            filename = '<span style=\" color: #3399FF;\">%s</span>'%args.filename
+            self.will_share_file.append(filename)
             print("Bitti")
 
     def recording(self):
+        self.step = 0
+        self.progressBar.setValue(0)
+        self.pushButton.setText("Recording...")
         self.pause_and_share.setEnabled(True)
         self.pushButton.setEnabled(False)
         global args
